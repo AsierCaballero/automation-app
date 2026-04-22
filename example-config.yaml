@@ -1,0 +1,25 @@
+tasks:
+  backup_db:
+    command: "pg_dump -U postgres mydb > /backups/db-$(date +%Y%m%d).sql"
+    schedule: "0 2 * * *"
+    description: "Backup diario de base de datos"
+    
+  sync_files:
+    command: "rsync -avz /data/ user@server:/backup/"
+    schedule: "0 3 * * *"
+    description: "Sincronizar archivos"
+    
+  docker_cleanup:
+    command: "docker image prune -af && docker container prune -f"
+    schedule: "0 0 * * 0"
+    description: "Limpiar Docker"
+    
+  ssl_check:
+    command: "bash /scripts/check-ssl.sh example.com"
+    schedule: "*/5 * * * *"
+    description: "Verificar certificados SSL"
+    
+  deploy:
+    command: "cd /app && git pull && docker-compose up -d --build"
+    schedule: "0 6 * * *"
+    description: "Deploy automático"
