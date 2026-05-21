@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# Automation App - Ejemplos de tareas automatizables
+
+# ============================================
+# BACKUP Y SINCRONIZACIÓN
+# ============================================
+
+# Backup de base de datos
+0 * * * * docker exec db pg_dump -U user dbname > /backups/db-$(date +\%Y\%m\%d).sql
+
+# Sincronizar archivos con rsync
+0 2 * * * rsync -avz /data/user@server:/backup/
+
+# Limpiar archivos antiguos
+0 3 * * * find /tmp -type f -mtime +7 -delete
+
+# ============================================
+# MONITOREO Y ALERTAS
+# ============================================
+
+# Verificar SSL
+*/5 * * * * /scripts/check-ssl.sh example.com
+
+# Verificar servicios
+*/10 * * * * /scripts/health-check.sh
+
+# Espacio en disco bajo
+0 * * * * [ $(df / | tail -1 | awk '{print $5}' | sed 's/%//') -gt 90 ] && alert.sh "Disco lleno"
+
+# ============================================
+# DEVOPS / CI/CD
+# ============================================
+
+# Build y deploy
+0 6 * * * cd /app && git pull && docker-compose up -d --build
+
+# Limpiar imágenes Docker antiguas
+0 0 * * 0 docker image prune -af
+
+# Actualizar contenedores
+0 5 * * * docker-compose pull && docker-compose up -d
+
+# ============================================
+# MANTENIMIENTO
+# ============================================
+
+# Actualizar sistema (Ubuntu/Debian)
+0 4 * * 0 apt update && apt upgrade -y
+
+# Rotar logs
+0 0 * * * logrotate -f /etc/logrotate.conf
+
+# Reiniciar servicio si falla
+*/5 * * * * pgrep -x nginx > /dev/null || systemctl restart nginx
+
+# ============================================
+# REPORTES Y NOTIFICACIONES
+# ============================================
+
+# Reporte diario de errores
+0 8 * * * /scripts/daily-errors.sh | mail -s "Daily Report" admin@example.com
+
+# Respaldo incremental
+0 23 * * * rdiff-backup /data /backups/incremental
+
+# ============================================
+# SCRIPTS DE EJEMPLO
+# ============================================
+
+# check-ssl.sh
+#!/bin/bash
+DOMAIN=${1:-localhost}
+echo | openssl s_client -servername $DOMAIN -connect $DOMAIN:443 2>/dev/null | openssl x509 -noout -dates
+
+# health-check.sh  
+#!/bin/bash
+curl -sf http://localhost:8080/health || alert.sh "Servicio caido"
